@@ -10,7 +10,8 @@ type Catalog = { models: Model[]; fetchedAt: number; missing: { id: string; name
 const errorText = (e: unknown) => e instanceof Error ? e.message : 'Something went wrong. Please try again.';
 function Modal({ title, children, close, wide = false }: { title: string; children: ReactNode; close: () => void; wide?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => { const d = ref.current!; const opener = document.activeElement as HTMLElement | null; d.showModal(); return () => { d.close(); if (opener?.isConnected) opener.focus({ preventScroll: true }); }; }, []);
+  const opener = useRef(document.activeElement as HTMLElement | null);
+  useEffect(() => { const d = ref.current!; d.showModal(); return () => { d.close(); if (opener.current?.isConnected) opener.current.focus({ preventScroll: true }); }; }, []);
   return <dialog ref={ref} className={wide ? 'modal wide' : 'modal'} onCancel={close} onClick={e => { if (e.target === ref.current) close(); }} aria-label={title}>
     <div className="modal-heading"><h2>{title}</h2><button className="icon-btn" aria-label="Close dialog" onClick={close}><X size={19}/></button></div>{children}
   </dialog>;
@@ -60,7 +61,7 @@ export function App() {
     };
     sidebarRef.current?.querySelector('button')?.focus();
     window.addEventListener('keydown', keys);
-    return () => window.removeEventListener('keydown', keys);
+    return () => { window.removeEventListener('keydown', keys); navigationButton.current?.focus({ preventScroll: true }); };
   }, [sidebar]);
 
   const refreshList = useCallback(async () => setConversations((await api<{ conversations: Conversation[] }>('/conversations')).conversations), []);
