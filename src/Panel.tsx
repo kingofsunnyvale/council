@@ -19,12 +19,14 @@ export function Panel({ id, models, turns, attempts, onExpand, onStop, onRetry, 
   const latestFor = (turn: Turn) => attempts.filter(a => a.turn_id === turn.id && a.model_id === id).sort((a,b) => b.number-a.number)[0];
   const last = turns.length ? latestFor(turns[turns.length - 1]) : undefined;
   const running = last && active(last);
+  const model = models.find(m => m.id === id);
+  const noSearch = model && !model.supported_parameters.includes('tools');
   useEffect(() => { if (pinned.current && scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight; }, [last?.text, turns.length]);
   useEffect(() => { if (!running) return; const timer = setInterval(() => tick(n => n+1), 1000); return () => clearInterval(timer); }, [running]);
   const elapsed = last?.started_at ? ((last.finished_at || Date.now()) - last.started_at) / 1000 : null;
   async function copy() { if (!last?.text) return; try { await navigator.clipboard.writeText(last.text); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); } }
   return <article className={'panel' + (expanded ? ' expanded-panel' : '')} style={{ '--model-color': who.color } as React.CSSProperties} aria-label={who.name + ' response'}>
-    <header className="panel-header"><div className="model-avatar">{who.provider.slice(0,1)}</div><div className="model-heading"><h2>{who.name}</h2><span>{who.provider}</span></div><span className={'panel-status ' + (running ? 'live' : '')}><i />{label(last)}</span>{!expanded && <button className="icon-btn" aria-label={'Expand ' + who.name} onClick={onExpand}><Maximize2 size={15}/></button>}</header>
+    <header className="panel-header"><div className="model-avatar">{who.provider.slice(0,1)}</div><div className="model-heading"><h2>{who.name}</h2><span>{who.provider}{noSearch ? ' · No web search' : ''}</span></div><span className={'panel-status ' + (running ? 'live' : '')}><i />{label(last)}</span>{!expanded && <button className="icon-btn" aria-label={'Expand ' + who.name} onClick={onExpand}><Maximize2 size={15}/></button>}</header>
     <div className="panel-scroll" ref={scroll} onScroll={() => { const s=scroll.current!; pinned.current=s.scrollHeight-s.scrollTop-s.clientHeight<70; }}>
       {!turns.length && <div className="panel-empty"><div className="orbit-mark">✳</div><p>A fresh perspective,<br/>ready when you are.</p><span>Independent conversation history</span></div>}
       {turns.map((turn, index) => {
