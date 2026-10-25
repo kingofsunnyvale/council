@@ -216,6 +216,12 @@ test('workspace discloses sharing, hides credential controls, and dialogs restor
   await page.screenshot({ path: `work/models-${test.info().project.name}.png`, fullPage: true });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Change models', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Prices & limits', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Prices & limits' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Search pricing' })).toBeVisible();
+  await noOverflow(page);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Prices & limits', exact: true })).toBeFocused();
 });
 
 test('session failures show direct recovery copy', async ({ page }) => {
