@@ -1,6 +1,6 @@
 # Council
 
-A public, shared dashboard for asking one question across one to eight frontier models. Answers stream independently, conversations are saved, and each model retains only its own assistant history.
+A public, shared workspace for sending a question to one to eight models. Answers stream independently, conversations are saved, and each model retains only its own assistant history.
 
 Production: <https://council-delta-nine.vercel.app> (public; no sign-in required).
 
@@ -11,6 +11,9 @@ Anyone can open Council and use the same saved conversations and host-provided O
 The key remains encrypted in D1 and is never returned to browsers. Public visitors cannot replace or disconnect it, and account-wide usage and key limits are not exposed. Credential maintenance uses the owner's trusted deployment tools. The Worker still rejects direct application requests without the server-only gateway secret. Vercel Standard Protection remains on generated deployment URLs and previews.
 
 ## Features
+
+- Questions appear once, followed by a grid of model responses. New conversations start with a composer and the selected models.
+- Neutral dark interface, expandable sources and usage details, and individual response reading views.
 
 - Live searchable catalog, explicit 1–8 model selection, current base prices and capabilities.
 - Requested defaults: GPT-6 Astra, Claude Opus 5.5, Gemini 4 Argon, Grok 4.7, Kimi K3.1 Pro, GLM 5.3, and Mistral Large 4. All seven were present in the catalog on October 24, 2026. Unavailable IDs are surfaced, never replaced silently.
