@@ -57,6 +57,8 @@ the authentication architecture before exposing chat or OpenRouter endpoints.
 
 ## Commands and verification
 
+Use Node.js 24, aligned across `.node-version`, `package.json`, and GitHub Actions.
+
 - `npm ci`: install pinned tooling.
 - `npm run build`: build the setup page to `dist/`.
 - `npm test`: test Worker health behavior and failure isolation.
