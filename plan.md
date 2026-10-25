@@ -1,6 +1,6 @@
 # Frontier AI Council implementation plan
 
-> Implementation decision (October 24, 2026): the owner selected Vercel/Cloudflare, then explicitly asked to omit additional identity verification. The implemented boundary is Vercel All Deployments protection plus a secret-authenticated gateway and browser-bound OpenRouter PKCE. The owner subsequently requested Hermes 4 405B as an eighth model; its current endpoint answers without search while the other models retain search. The original alternatives below are retained as planning history; see `AGENTS.md` for the actual architecture.
+> Implementation decision (October 24, 2026): the owner selected Vercel/Cloudflare, then explicitly asked to omit additional identity verification. The implemented boundary is Vercel All Deployments protection plus a secret-authenticated gateway and browser-bound OpenRouter PKCE. The original alternatives below are retained as planning history; see `AGENTS.md` for the actual architecture.
 
 This is the handoff for a new chat to implement. The owner explicitly asked to
 finish repository setup first and leave dashboard implementation to that chat.

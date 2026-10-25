@@ -61,10 +61,7 @@ test('model parameters enforce exact IDs, high reasoning, caps, and independent 
   assert.deepEqual(result.reasoning,{effort:'high',exclude:true});
   assert.deepEqual(result.tools![0].parameters,{engine:'exa',mode:'auto',max_uses:3,max_results:5,max_total_results:15});
   assert.equal('tools' in parameters(fixtureModels[0],false),false);
-  assert.equal('tools' in parameters({...fixtureModels[0],supported_parameters:['max_tokens']},true),false);
-  const hermes=parameters(fixtureModels.find(m=>m.id==='nousresearch/hermes-4-405b')!,true);
-  assert.equal('tools' in hermes,false);
-  assert.deepEqual(hermes.reasoning,{enabled:true,exclude:true});
+  assert.throws(()=>parameters({...fixtureModels[0],supported_parameters:['max_tokens']},true));
   assert.equal(parameters({...fixtureModels[0],top_provider:{max_completion_tokens:4096}},false).max_tokens,4096);
 });
 test('citations reject unsafe links and absent usage remains unknown', () => {

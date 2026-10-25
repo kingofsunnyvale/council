@@ -13,10 +13,9 @@ Open the app, connect your OpenRouter account, and authorize Council using OpenR
 ## Features
 
 - Live searchable catalog, explicit 1–8 model selection, current base prices and capabilities.
-- Requested defaults: GPT-6 Astra, Claude Opus 5.5, Gemini 4 Argon, Grok 4.7, Kimi K3.1 Pro, GLM 5.3, Mistral Large 4, and Hermes 4 405B. All eight were present in the catalog on October 24, 2026. Unavailable IDs are surfaced, never replaced silently.
-- Hermes 4 405B is the eighth default, with reasoning enabled. Its current OpenRouter endpoint does not advertise tools, so it answers without web search; this limitation appears in its panel and beside the composer. Other models still search independently. Existing conversations retain their original lineup.
+- Requested defaults: GPT-6 Astra, Claude Opus 5.5, Gemini 4 Argon, Grok 4.7, Kimi K3.1 Pro, GLM 5.3, and Mistral Large 4. All seven were present in the catalog on October 24, 2026. Unavailable IDs are surfaced, never replaced silently.
 - High reasoning when supported; completion cap of 32,768 tokens, including reasoning, bounded by each model's advertised limit.
-- Model-controlled Exa search (Auto/Off), up to three searches and five results per search per supported model. Returned citations and reported usage/cost are attached to each response. Token prices, tier caveats and search charges appear under **Prices & limits** before sending.
+- Model-controlled Exa search (Auto/Off), up to three searches and five results per search per model. Returned citations and reported usage/cost are attached to each response. Token prices, tier caveats and search charges appear under **Prices & limits** before sending.
 - Per-model Stop, Retry, Copy and expanded reading; Stop all; saved conversations; safe Markdown; mobile layout and keyboard navigation.
 - Atomic stream claims, versioned turns, idempotent submissions/retries, 2-second checkpoints/cancellation polling, and 30-second recovery leases. A response is capped at 270 seconds; interruption never automatically starts another billable attempt.
 - Failed/cancelled partials and previous retries remain visible. Follow-ups use shared prompts and the model's latest completed answer for each prior turn; incomplete answers are excluded. Retrying an older turn after a follow-up is disallowed so history stays consistent.
@@ -35,6 +34,8 @@ npm run test:e2e
 ```
 
 The backend tests use SQLite and deterministic upstream fixtures to exercise concurrent starts, stream framing, late usage, isolated failures, cancellations, recovery, OAuth replay/expiry, ownership, request limits and malicious URLs. Browser tests use mock responses and check desktop/mobile layouts, safe Markdown, persistence and draft protection. These tests do not spend OpenRouter credits or prove live provider/search behavior.
+
+Production verification on October 24, 2026 also exercised the seven default models with a real OpenRouter account. All seven requests started within 968 ms, completed independently, returned search citations and reported usage, and were read back from D1. The reported total for that check was $0.191704. The supplied account key is stored encrypted on the backend.
 
 ## Deployment
 

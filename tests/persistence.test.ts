@@ -11,7 +11,7 @@ test('shared turn creation is idempotent and competing tabs cannot fork the sequ
   const duplicates=await Promise.all(Array.from({length:8},()=>createTurn(f.env,f.owner,id,input,fixtureModels)));
   assert.equal(new Set(duplicates.map(d=>d.turns[0].id)).size,1);
   assert.equal(f.sql.prepare('SELECT count(*) AS n FROM turns').get()!.n,1);
-  assert.equal(f.sql.prepare('SELECT count(*) AS n FROM attempts').get()!.n,fixtureModels.length);
+  assert.equal(f.sql.prepare('SELECT count(*) AS n FROM attempts').get()!.n,7);
   await assert.rejects(createTurn(f.env,f.owner,id,{...input,prompt:'Different'},fixtureModels),/key/);
   await assert.rejects(createTurn(f.env,f.owner,id,{...input,key:random(),version:1},fixtureModels),/running|changed/);
   f.sql.prepare("UPDATE attempts SET status='complete',text='done'").run();

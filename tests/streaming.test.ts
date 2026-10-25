@@ -7,7 +7,7 @@ import { streamAttempt } from '../worker/stream';
 import { readSSE } from '../shared/sse';
 const encoder=new TextEncoder();
 const frame=(data: unknown)=>`data: ${JSON.stringify(data)}\r\n\r\n`;
-async function connected(n=fixtureModels.length) {
+async function connected(n=7) {
   const f=await fixture();
   f.sql.prepare('INSERT INTO connections VALUES(?,?,?)').run(f.owner,await seal('test-only-provider-key',f.owner,f.env.ENCRYPTION_KEYS!),Date.now());
   const c=await createConversation(f.env,f.owner,fixtureModels.slice(0,n).map(m=>m.id),fixtureModels,random());
@@ -22,21 +22,20 @@ test('SSE handles arbitrary UTF-8 and CRLF splits, comments, multiline data, and
   assert.deepEqual(events,['hello 🌍\nagain','[DONE]']);
   await assert.rejects(async()=>{for await(const _ of readSSE(new ReadableStream({start(c){c.enqueue(encoder.encode('data: '+'x'.repeat(600000)));c.close();}}))){}},/too large/);
 });
-test('all eight upstream requests start before any completes, independently stream, preserve citations and late usage', async t => {
+test('all seven upstream requests start before any completes, independently stream, preserve citations and late usage', async t => {
   const f=await connected(); const calls:string[]=[]; let release!:()=>void;const barrier=new Promise<void>(r=>release=r);
   t.mock.method(globalThis,'fetch',async (_url: unknown, options: RequestInit) => {
     const payload=JSON.parse(options.body as string);calls.push(payload.model);
-    if(payload.model==='nousresearch/hermes-4-405b'){assert.equal(payload.tools,undefined);assert.deepEqual(payload.reasoning,{enabled:true,exclude:true});}
-    else {assert.equal(payload.tools[0].parameters.max_uses,3);assert.equal(payload.tools[0].parameters.engine,'exa');}
+    assert.equal(payload.tools[0].parameters.max_uses,3);assert.equal(payload.tools[0].parameters.engine,'exa');
     assert.equal(payload.messages.length,1);assert.equal(payload.provider.allow_fallbacks,false);
-    if(calls.length===fixtureModels.length)release();await barrier;
+    if(calls.length===7)release();await barrier;
     const bytes=encoder.encode(': processing\n\n'+frame({id:'provider-'+calls.indexOf(payload.model),choices:[{delta:{content:payload.model+' 🌍',reasoning:'DO NOT STORE'}}]})+frame({choices:[{delta:{annotations:[{type:'url_citation',url_citation:{url:'https://example.com/news',title:'Actual source'}}]},finish_reason:'stop'}]})+frame({choices:[],usage:{total_tokens:42,cost:0.017}})+'data: [DONE]\n\n');
     return new Response(new ReadableStream({start(c){for(let i=0;i<bytes.length;i+=7)c.enqueue(bytes.slice(i,i+7));c.close();}}),{headers:{'content-type':'text/event-stream'}});
   });
   const responses=await Promise.all(f.d.attempts.map(a=>streamAttempt(new Request('https://worker.example/stream'),f.env,f.ctx,f.owner,a.id)));
   const events=await Promise.all(responses.map(collect));await Promise.all(f.tasks);
-  assert.equal(calls.length,fixtureModels.length);assert.equal(new Set(calls).size,fixtureModels.length);
-  for(let i=0;i<fixtureModels.length;i++){
+  assert.equal(calls.length,7);assert.equal(new Set(calls).size,7);
+  for(let i=0;i<7;i++){
     const saved=await getAttempt(f.env,f.owner,f.d.attempts[i].id);
     assert.equal(saved.status,'complete');assert.equal(saved.text,f.d.attempts[i].model_id+' 🌍');
     assert.equal(JSON.parse(saved.usage!).cost,0.017);assert.equal(JSON.parse(saved.citations)[0].title,'Actual source');

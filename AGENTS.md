@@ -32,8 +32,8 @@ The owner explicitly chose the existing Vercel/Cloudflare infrastructure, then a
 One shared prompt creates one persisted turn and one independently streamed attempt per selected model. Each model sees shared user turns and only its own completed assistant history. There is no synthesis, voting, or debate.
 
 - Pin exact ordered model IDs for each conversation. A changed lineup starts a new one. Do not silently substitute unavailable models.
-- Validate models, pricing, tool support and reasoning efforts against the live OpenRouter catalog. The eight requested defaults, including Kimi K3.1 Pro and Hermes 4 405B, live in `shared/config.ts`.
-- Default to high reasoning when advertised; otherwise enable reasoning when supported. Hermes 4 405B has reasoning but no advertised tool support. Omit search tools for unsupported models while disclosing that limit before submission and in their panels; never block the rest of a mixed lineup. Cap completion at 32,768 tokens, subject to model limits.
+- Validate models, pricing, tool support and reasoning efforts against the live OpenRouter catalog. The requested defaults, including Kimi K3.1 Pro, live in `shared/config.ts`.
+- Default to high reasoning when advertised and cap completion at 32,768 tokens, subject to model limits.
 - Search uses `openrouter:web_search`, Exa `auto`, `max_uses: 3`, `max_results: 5`, `max_total_results: 15`. Each model chooses its own searches. Search Off omits tools.
 - Persist partials, returned citations, provider IDs and only reported usage/cost. Missing metrics remain unknown. Never store hidden chain-of-thought.
 - D1 enforces ownership, model membership, turn versions and idempotency. Stream claims are atomic. Cancellation is stored in D1, polled every 2 seconds, and aborts upstream; it is not a process-global controller map.

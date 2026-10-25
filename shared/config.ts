@@ -8,7 +8,6 @@ export const REQUESTED_MODELS = [
   { id: 'moonshotai/kimi-k3.1-pro', name: 'Kimi K3.1 Pro', provider: 'Moonshot', color: '#b9adf7' },
   { id: 'z-ai/glm-5.3', name: 'GLM 5.3', provider: 'Z.ai', color: '#edcc82' },
   { id: 'mistralai/mistral-large-4-0', name: 'Mistral Large 4', provider: 'Mistral', color: '#edab78' },
-  { id: 'nousresearch/hermes-4-405b', name: 'Hermes 4 405B', provider: 'Nous', color: '#dba6d8' },
 ] as const;
 export const SEARCH = { type: 'openrouter:web_search', parameters: { engine: 'exa', mode: 'auto', max_uses: 3, max_results: 5, max_total_results: 15 } };
 export const SEARCH_DOCS = 'https://openrouter.ai/docs/guides/features/server-tools/web-search';

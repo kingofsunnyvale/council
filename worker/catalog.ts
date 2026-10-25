@@ -21,6 +21,7 @@ export function validateModels(ids: unknown, models: Model[]): asserts ids is st
   if (!Array.isArray(ids) || ids.length < 1 || ids.length > 8 || new Set(ids).size !== ids.length || ids.some(id => typeof id !== 'string' || !models.some(m => m.id === id))) throw new HttpError(400, 'Choose one to eight distinct models from the live catalog.');
 }
 export function parameters(model: Model, search: boolean) {
+  if (search && !model.supported_parameters.includes('tools')) throw new HttpError(400, `${model.name} does not advertise tool support. Turn search off or choose another model.`);
   const supportsCap = model.supported_parameters.includes('max_tokens') || model.supported_parameters.includes('max_completion_tokens');
   if (!supportsCap) throw new HttpError(400, `${model.name} does not advertise a completion limit. Choose another model.`);
   const cap = Math.min(MAX_COMPLETION, model.top_provider.max_completion_tokens || MAX_COMPLETION, model.context_length);
@@ -28,9 +29,8 @@ export function parameters(model: Model, search: boolean) {
   return {
     model: model.id, stream: true, stream_options: { include_usage: true },
     [model.supported_parameters.includes('max_tokens') ? 'max_tokens' : 'max_completion_tokens']: cap,
-    ...(high ? { reasoning: { effort: 'high', exclude: true } } : model.supported_parameters.includes('reasoning') ? { reasoning: { enabled: true, exclude: true } } : {}),
-    // Mixed lineups remain usable: the UI discloses which models cannot search.
-    ...(search && model.supported_parameters.includes('tools') ? { tools: [SEARCH] } : {}),
+    ...(high ? { reasoning: { effort: 'high', exclude: true } } : {}),
+    ...(search ? { tools: [SEARCH] } : {}),
     provider: { require_parameters: true, allow_fallbacks: false },
   };
 }

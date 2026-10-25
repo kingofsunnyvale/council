@@ -18,7 +18,7 @@ class Statement {
   async all() { return this.execute(); }
   async run() { return this.execute(); }
 }
-export const fixtureModels: Model[] = REQUESTED_MODELS.map(m => ({ id: m.id, name: `${m.provider}: ${m.name}`, context_length: 200_000, top_provider: { max_completion_tokens: 128_000 }, supported_parameters: m.provider === 'Nous' ? ['max_tokens','reasoning'] : ['max_tokens','tools','reasoning'], pricing: { prompt: '0.000002', completion: '0.00001' }, reasoning: m.provider === 'Nous' ? {} : { supported_efforts: ['high','low'] } }));
+export const fixtureModels: Model[] = REQUESTED_MODELS.map(m => ({ id: m.id, name: `${m.provider}: ${m.name}`, context_length: 200_000, top_provider: { max_completion_tokens: 128_000 }, supported_parameters: ['max_tokens','tools','reasoning'], pricing: { prompt: '0.000002', completion: '0.00001' }, reasoning: { supported_efforts: ['high','low'] } }));
 export async function fixture() {
   const sql = new DatabaseSync(':memory:'); sql.exec(readFileSync(new URL('../migrations/0001_council.sql',import.meta.url),'utf8'));
   const DB = {
