@@ -3,9 +3,10 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": { "api/[...path].ts": { "maxDuration": 300 } },
+  "functions": { "api/gateway.ts": { "maxDuration": 300 } },
   "rewrites": [
-    { "source": "/api/health", "destination": "https://council-api.anywager.workers.dev/health" }
+    { "source": "/api/health", "destination": "https://council-api.anywager.workers.dev/health" },
+    { "source": "/api/:path*", "destination": "/api/gateway" }
   ],
   "headers": [
     { "source": "/(.*)", "headers": [

@@ -9,7 +9,7 @@ Complete authorized implementation, configuration, testing, deployment and verif
 The owner explicitly chose the existing Vercel/Cloudflare infrastructure, then asked to omit additional identity verification. Council therefore uses **Vercel deployment protection**, not GitHub OAuth or ChatGPT identity.
 
 - Vercel protection must remain **All Deployments** (`ssoProtection.deploymentType: all`). Every visitor admitted by that project protection shares the same private workspace. There is no per-person application allowlist.
-- The React/TypeScript frontend and thin Node.js gateway (`api/[...path].ts`) run on Vercel. Only the gateway has the server-side `SERVICE_SECRET`.
+- The React/TypeScript frontend and thin Node.js gateway (`api/gateway.ts`) run on Vercel. An explicit `/api/:path*` rewrite routes every API depth to it; do not rely on framework-specific catch-all filenames. Only the gateway has the server-side `SERVICE_SECRET`.
 - The Cloudflare Worker checks that secret before every application endpoint. It never trusts incoming `oai-*`, user IDs, or client-supplied identity headers.
 - The gateway forwards only cookies, Origin, and Content-Type, and constructs its own service-authentication header. The direct Worker URL exposes only the non-sensitive D1 health check without that credential.
 - A secure, HttpOnly, SameSite=Lax browser session binds OpenRouter PKCE state to its initiator. Session creation requires both gateway authentication and a valid Origin. It is not a second user-identity check.
