@@ -1,0 +1,13 @@
+.git/
+.env*
+.dev.vars*
+.wrangler/
+node_modules/
+tests/
+worker/
+worker-configuration.d.ts
+wrangler.jsonc
+AGENTS.md
+README.md
+plan.md
+.github/

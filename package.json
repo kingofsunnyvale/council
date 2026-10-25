@@ -1,0 +1,16 @@
+{
+  "name": "council",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev:worker": "node scripts/wrangler.mjs dev",
+    "deploy:worker": "node scripts/wrangler.mjs deploy",
+    "check:worker": "node scripts/wrangler.mjs deploy --dry-run",
+    "types:worker": "node scripts/wrangler.mjs types",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": { "wrangler": "4.152.0" }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "council-api",
+  "account_id": "8b1ada8b10e9e8e5664ec10bd9d3c370",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-24",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "council", "database_id": "46e3b3b2-5f5b-46c3-bd68-fabf4fb2de12", "migrations_dir": "migrations" }
+  ]
+}
