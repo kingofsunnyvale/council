@@ -219,7 +219,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .page-title, .topbar-actions { gap: 6px; }
   .page-title h1 { font-size: 13px; }
   .model-selector { padding: 6px 8px; font-size: 12px; }
-  .connection { padding: 8px; }
+  .connection { padding: 8px; min-width: 32px; min-height: 32px; justify-content: center; }
   .connection span { display: none; }
   .notices { padding-inline: 16px; }
   .empty-workspace { padding: 32px 16px; }

@@ -24,13 +24,13 @@ export function Panel({ id, models, turn, attempt, previous, canRetry, onExpand,
   const who = identity(id, models);
   const scroll = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
-  const mounted = useRef(false);
+  const previousText = useRef(attempt?.text);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const [, tick] = useState(0);
   const running = !!attempt && active(attempt);
-  useEffect(() => { if (mounted.current && pinned.current && scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight; mounted.current = true; }, [attempt?.text]);
+  useEffect(() => { if (previousText.current !== attempt?.text && pinned.current && scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight; previousText.current = attempt?.text; }, [attempt?.text]);
   useEffect(() => {
     setCopied(false); setCopyError(false);
     return () => { if (copyTimer.current) clearTimeout(copyTimer.current); };
