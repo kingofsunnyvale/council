@@ -21,6 +21,9 @@
 - Vercel is connected to this GitHub repository. Pushing `main` triggers production builds.
 - Cloudflare account: `8b1ada8b10e9e8e5664ec10bd9d3c370`.
 - Cloudflare Worker: `council-api`, URL <https://council-api.anywager.workers.dev>.
+- Cloudflare Builds is connected to `kingofsunnyvale/council`, production branch
+  `main`, root `/`, build command `npm test`, deploy command `npm run deploy:worker`.
+  Preview builds and build caching are disabled. Reuse the existing build token.
 - The exact Vercel rewrite `/api/health` forwards to the Worker's `/health`.
 - Cloudflare D1 database: `council`, ID `46e3b3b2-5f5b-46c3-bd68-fabf4fb2de12`, binding `DB`.
 - Worker configuration lives in `wrangler.jsonc`; use its account and resource IDs.
@@ -65,9 +68,10 @@ the authentication architecture before exposing chat or OpenRouter endpoints.
 - `vercel deploy --prod --yes --scope anywager`: explicitly deploy the Vercel project.
 
 After changes, run relevant checks and verify the deployed URLs. A successful CLI
-upload is insufficient: check the final deployment and its HTTP behavior. A 401
-from an unauthenticated protected Vercel deployment is expected; inspect it using
-an authorized Vercel session. Verify the Worker `/health` response reads D1.
+upload is insufficient: check the final deployment and its HTTP behavior. A sign-in
+redirect or 401 from an unauthenticated protected Vercel deployment is expected;
+inspect it using an authorized Vercel session. Verify the Worker `/health` response
+reads D1.
 
 ## Secrets and privacy
 

@@ -3,7 +3,8 @@
 Infrastructure for a private, multi-model AI Council dashboard.
 
 - **Vercel:** frontend deployment, connected to this repository's `main` branch.
-- **Cloudflare Workers:** backend runtime, configured by `wrangler.jsonc`.
+- **Cloudflare Workers:** backend runtime, configured by `wrangler.jsonc`, with
+  Cloudflare Builds connected to `main`.
 - **Cloudflare D1:** database bound to the Worker as `DB`.
 
 The current deployment is an infrastructure preview. Model conversations,
@@ -31,5 +32,7 @@ methods return 405. No model credentials or private application data are served.
 
 Vercel builds `dist/` using `npm run build`. Its GitHub integration deploys `main`.
 For an explicit deployment, run `vercel deploy --prod --yes --scope anywager`.
-Deploy the Worker with `npm run deploy:worker` after checking the account and
-bindings in `wrangler.jsonc`. Do not assume a Vercel deployment also deploys the Worker.
+Cloudflare Builds runs `npm test` and `npm run deploy:worker` for pushes to `main`.
+Preview builds are disabled. For an explicit Worker deployment, use
+`npm run deploy:worker` after checking the account and bindings in `wrangler.jsonc`.
+The two platforms deploy independently; verify both after a push.

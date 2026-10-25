@@ -15,6 +15,9 @@ not implement the dashboard features below.
 - Cloudflare Worker: `council-api`, <https://council-api.anywager.workers.dev>.
 - D1: `council`, ID `46e3b3b2-5f5b-46c3-bd68-fabf4fb2de12`, binding `DB`.
 - The Vercel `/api/health` rewrite forwards to the Worker's `/health`.
+- Both Vercel and Cloudflare Builds are connected to `main`. Cloudflare runs
+  `npm test` then `npm run deploy:worker`; preview builds and caching are disabled.
+  These are independent deployments: verify both when changing shared interfaces.
 - Vercel protection is set to **All Deployments**. Keep it enabled.
 - `public/index.html` is only an infrastructure page; replace it during implementation.
 - `worker/index.js` currently exposes a safe health check only. Replace/extend it
