@@ -11,3 +11,6 @@ AGENTS.md
 README.md
 plan.md
 .github/
+work/
+test-results/
+playwright-report/

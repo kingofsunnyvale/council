@@ -1,38 +1,46 @@
 # Council
 
-Infrastructure for a private, multi-model AI Council dashboard.
+A private, responsive dashboard for asking one question across one to eight frontier models. Answers stream independently, conversations are saved, and each model retains only its own assistant history.
 
-- **Vercel:** frontend deployment, connected to this repository's `main` branch.
-- **Cloudflare Workers:** backend runtime, configured by `wrangler.jsonc`, with
-  Cloudflare Builds connected to `main`.
-- **Cloudflare D1:** database bound to the Worker as `DB`.
+Production: <https://council-delta-nine.vercel.app> (Vercel protected).
 
-The current deployment is an infrastructure preview. Model conversations,
-OpenRouter OAuth, search, and the dashboard UI have not been implemented yet.
+## Access and account connection
 
-See [AGENTS.md](AGENTS.md) for the existing hosting resources, authentication
-constraints, deployment commands, and instructions for future coding agents.
-The dashboard implementation handoff is in [plan.md](plan.md).
+Vercel's **All Deployments** protection controls access. At the owner's request there is no additional GitHub or ChatGPT sign-in. Everyone admitted by the project's Vercel protection shares this workspace. The Node gateway authenticates to Cloudflare with a server-only secret; direct Worker application requests are rejected. Keep deployment protection enabled.
 
-## Develop and verify
+Open the app, connect your OpenRouter account, and authorize Council using OpenRouter's PKCE flow. Credentials are exchanged on the server and encrypted in D1; the browser never receives the provider key. Connection status reports the key's documented limit, not an assumed account balance. Disconnect deletes Council's stored credential; revoke the key in OpenRouter to disable it at the provider too.
+
+## Features
+
+- Live searchable catalog, explicit 1–8 model selection, current base prices and capabilities.
+- Requested defaults: GPT-6 Astra, Claude Opus 5.5, Gemini 4 Argon, Grok 4.7, Kimi K3.1 Pro, GLM 5.3, and Mistral Large 4. All seven were present in the catalog on October 24, 2026. Unavailable IDs are surfaced, never replaced silently.
+- High reasoning when supported; completion cap of 32,768 tokens, including reasoning, bounded by each model's advertised limit.
+- Model-controlled Exa search (Auto/Off), up to three searches and five results per search per model. Returned citations and reported usage/cost are attached to each response. Token prices, tier caveats and search charges appear under **Prices & limits** before sending.
+- Per-model Stop, Retry, Copy and expanded reading; Stop all; saved conversations; safe Markdown; mobile layout and keyboard navigation.
+- Atomic stream claims, versioned turns, idempotent submissions/retries, 2-second checkpoints/cancellation polling, and 30-second recovery leases. A response is capped at 270 seconds; interruption never automatically starts another billable attempt.
+- Failed/cancelled partials and previous retries remain visible. Follow-ups use shared prompts and the model's latest completed answer for each prior turn; incomplete answers are excluded. Retrying an older turn after a follow-up is disallowed so history stays consistent.
+
+## Development
+
+Use Node 24. `npm ci`, then create an ignored `.dev.vars` with local `SERVICE_SECRET` and `ENCRYPTION_KEYS` values as described in `AGENTS.md`. `npm run db:local` applies local migrations. Run `npm run dev:worker` and `npm run dev` in separate terminals; open <http://localhost:5173>. The development gateway reads only `.dev.vars`, never `.env.local`.
 
 ```sh
-npm ci
-npm run build
+npm run typecheck
 npm test
+npm run build
 npm run check:worker
-npm run dev:worker
+npx playwright install chromium
+npm run test:e2e
 ```
 
-The Worker's `GET /health` checks D1 connectivity and returns a small JSON status.
-It returns 503 if D1 is unavailable. Other paths return 404 and unsupported health
-methods return 405. No model credentials or private application data are served.
+The backend tests use SQLite and deterministic upstream fixtures to exercise concurrent starts, stream framing, late usage, isolated failures, cancellations, recovery, OAuth replay/expiry, ownership, request limits and malicious URLs. Browser tests use mock responses and check desktop/mobile layouts, safe Markdown, persistence and draft protection. These tests do not spend OpenRouter credits or prove live provider/search behavior.
 
-## Deploy
+## Deployment
 
-Vercel builds `dist/` using `npm run build`. Its GitHub integration deploys `main`.
-For an explicit deployment, run `vercel deploy --prod --yes --scope anywager`.
-Cloudflare Builds runs `npm test` and `npm run deploy:worker` for pushes to `main`.
-Preview builds are disabled. For an explicit Worker deployment, use
-`npm run deploy:worker` after checking the account and bindings in `wrangler.jsonc`.
-The two platforms deploy independently; verify both after a push.
+Reuse the existing projects and database identified in `AGENTS.md`. Apply `npm run db:remote` before deploying a schema change. Store matching `SERVICE_SECRET` values in Vercel production and Worker secrets, and store `ENCRYPTION_KEYS` only on the Worker. `.env.example` contains names, never real values.
+
+GitHub `main` triggers independent Vercel and Cloudflare production builds. GitHub Actions runs type checking, unit tests, the frontend build, Worker bundling and desktop/mobile tests. Verify both hosts after pushing; CLI upload success alone is insufficient. Preview deployments lack production secrets and fail closed.
+
+The canonical origin is in `shared/config.ts`; use it for the application and OpenRouter callback. The Worker's unauthenticated `/health` reads D1 and returns no private data. All application endpoints require the gateway secret, and all data endpoints additionally require a browser session. Mutations validate Origin and request sizes.
+
+Search API reference: [OpenRouter server-side web search](https://openrouter.ai/docs/guides/features/server-tools/web-search). Connection reference: [OpenRouter OAuth PKCE](https://openrouter.ai/docs/guides/overview/auth/oauth).

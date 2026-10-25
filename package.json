@@ -3,14 +3,42 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "dev:worker": "node scripts/wrangler.mjs dev",
+    "build": "vite build",
+    "dev:worker": "node scripts/wrangler.mjs dev --var APP_ORIGIN:http://localhost:5173",
     "deploy:worker": "node scripts/wrangler.mjs deploy",
     "check:worker": "node scripts/wrangler.mjs deploy --dry-run",
     "types:worker": "node scripts/wrangler.mjs types",
-    "test": "node --test tests/*.test.mjs"
+    "test": "tsx --test tests/*.test.ts",
+    "dev": "vite",
+    "typecheck": "npm run types:worker && tsc --noEmit",
+    "test:e2e": "playwright test",
+    "db:local": "node scripts/wrangler.mjs d1 migrations apply council --local",
+    "db:remote": "node scripts/wrangler.mjs d1 migrations apply council --remote"
   },
-  "devDependencies": { "wrangler": "4.152.0" }
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261025.1",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "wrangler": "4.152.0"
+  },
+  "dependencies": {
+    "lucide-react": "^1.61.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "overrides": {
+    "undici": "^7.30.1"
+  }
 }
