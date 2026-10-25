@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { PUBLIC_ORIGIN, WORKER_ORIGIN } from '../shared/config';
+import { PUBLIC_ORIGIN, WORKER_ORIGIN } from '../shared/config.js';
 
 export const config = { maxDuration: 300 };
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
