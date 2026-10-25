@@ -25,10 +25,11 @@ export type Model = {
 };
 export type Citation = { url: string; title: string };
 export type Usage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number };
+export type Verdict = 'yes' | 'no';
 export type Attempt = {
   id: string; turn_id: string; conversation_id: string; model_id: string; number: number;
   status: 'pending' | 'running' | 'complete' | 'stopped' | 'interrupted' | 'error';
-  text: string; citations: Citation[]; usage: Usage | null; error: string | null;
+  text: string; citations: Citation[]; usage: Usage | null; error: string | null; verdict: Verdict | null;
   started_at: number | null; finished_at: number | null; created_at: number; provider_id: string | null;
 };
 export type Turn = { id: string; sequence: number; prompt: string; search: number; created_at: number };

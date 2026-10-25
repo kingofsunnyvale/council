@@ -30,12 +30,13 @@ The owner chose Vercel/Cloudflare, omitted additional identity verification, and
 
 ## Product invariants
 
-One shared prompt creates one persisted turn and one independently streamed attempt per selected model. Each model sees shared user turns and only its own completed assistant history. There is no synthesis, voting, or debate.
+One shared prompt creates one persisted turn and one independently streamed attempt per selected model. Each model sees shared user turns and only its own completed assistant history. There is no synthesis, aggregate vote, or debate. Each model independently supplies a YES/NO conclusion for binary questions.
 
 - Pin exact ordered model IDs for each conversation. A changed lineup starts a new one. Do not silently substitute unavailable models.
 - Validate models, pricing, tool support and reasoning efforts against the live OpenRouter catalog. The requested defaults, including Kimi K3.1 Pro, live in `shared/config.ts`.
 - Default to high reasoning when advertised and cap completion at 32,768 tokens, subject to model limits.
 - Search uses `openrouter:web_search`, Exa `auto`, `max_uses: 3`, `max_results: 5`, `max_total_results: 15`. Each model chooses its own searches. Search Off omits tools.
+- Automatically recognize any yes/no question or decision. Require the responding model to make its own YES or NO choice (no neutral option), independent of the side requested in the prompt. Show a green YES or red NO badge only after successful completion; open-ended requests have no badge. Persist verdicts per attempt, never infer them from keywords in prose, and never expose verdict metadata in answers or subsequent model history.
 - Persist partials, returned citations, provider IDs and only reported usage/cost. Missing metrics remain unknown. Never store hidden chain-of-thought.
 - D1 enforces ownership, model membership, turn versions and idempotency. Stream claims are atomic. Cancellation is stored in D1, polled every 2 seconds, and aborts upstream; it is not a process-global controller map.
 - Attempts have 30-second leases and a 270-second duration cap, below the gateway's 300-second cap. Expired attempts become interrupted on the next application read. Retry is explicit and only allowed on the latest turn. Previous attempts remain available.

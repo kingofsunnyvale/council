@@ -12,6 +12,11 @@ export const price = (value: unknown) => typeof value === 'string' && Number.isF
 export const cost = (value?: number) => value === undefined ? 'Cost unavailable' : '$' + value.toFixed(value < 0.01 ? 5 : 3);
 export const label = (a?: Attempt) => !a ? 'Ready' : a.status === 'running' ? (a.text ? 'Responding' : 'Waiting for response') : a.status === 'pending' ? 'Connecting' : { complete: 'Complete', stopped: 'Stopped', interrupted: 'Interrupted', error: 'Error' }[a.status];
 
+function VerdictBadge({ attempt }: { attempt?: Attempt }) {
+  if (attempt?.status !== 'complete' || !attempt.verdict) return null;
+  return <span className={'verdict-badge verdict-' + attempt.verdict} aria-label={'Conclusion: ' + attempt.verdict.toUpperCase()} title="This model's final conclusion">{attempt.verdict.toUpperCase()}</span>;
+}
+
 export function Panel({ id, models, turns, attempts, onExpand, onStop, onRetry, expanded = false }: {
   id: string; models: Model[]; turns: Turn[]; attempts: Attempt[]; onExpand: () => void; onStop: (a: Attempt) => void; onRetry: (a: Attempt) => void; expanded?: boolean;
 }) {
@@ -24,7 +29,7 @@ export function Panel({ id, models, turns, attempts, onExpand, onStop, onRetry, 
   const elapsed = last?.started_at ? ((last.finished_at || Date.now()) - last.started_at) / 1000 : null;
   async function copy() { if (!last?.text) return; try { await navigator.clipboard.writeText(last.text); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); } }
   return <article className={'panel' + (expanded ? ' expanded-panel' : '')} style={{ '--model-color': who.color } as React.CSSProperties} aria-label={who.name + ' response'}>
-    <header className="panel-header"><div className="model-avatar">{who.provider.slice(0,1)}</div><div className="model-heading"><h2>{who.name}</h2><span>{who.provider}</span></div><span className={'panel-status ' + (running ? 'live' : '')}><i />{label(last)}</span>{!expanded && <button className="icon-btn" aria-label={'Expand ' + who.name} onClick={onExpand}><Maximize2 size={15}/></button>}</header>
+    <header className="panel-header"><div className="model-avatar">{who.provider.slice(0,1)}</div><div className="model-heading"><h2>{who.name}</h2><span>{who.provider}</span></div><span className={'panel-status ' + (running ? 'live' : '')} role="status">{last?.status === 'complete' && last.verdict ? <VerdictBadge attempt={last}/> : <><i />{label(last)}</>}</span>{!expanded && <button className="icon-btn" aria-label={'Expand ' + who.name} onClick={onExpand}><Maximize2 size={15}/></button>}</header>
     <div className="panel-scroll" ref={scroll} onScroll={() => { const s=scroll.current!; pinned.current=s.scrollHeight-s.scrollTop-s.clientHeight<70; }}>
       {!turns.length && <div className="panel-empty"><div className="orbit-mark">✳</div><p>A fresh perspective,<br/>ready when you are.</p><span>Independent conversation history</span></div>}
       {turns.map((turn, index) => {
@@ -32,11 +37,12 @@ export function Panel({ id, models, turns, attempts, onExpand, onStop, onRetry, 
         return <section className="exchange" key={turn.id}>
           <div className="panel-prompt"><span>YOU · {index + 1}</span><p>{turn.prompt}</p></div>
           {a?.text && <div className="markdown"><Markdown remarkPlugins={[remarkGfm]} skipHtml urlTransform={url => safeUrl(url) || ''} components={{ a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer noopener">{children}</a>, img: ({ alt }) => <span className="image-placeholder">[Image: {alt || 'not loaded'}]</span> }}>{a.text}</Markdown></div>}
+          {index < turns.length - 1 && <VerdictBadge attempt={a}/>}
           {a && active(a) && <div className="thinking"><span/><span/><span/><span className="sr-only">{label(a)}</span></div>}
           {a?.error && <div className="response-error">{a.error}</div>}
           {a?.status === 'stopped' && <p className="muted">Response stopped. {a.text ? 'Partial answer saved.' : 'No answer returned.'}</p>}
           {a?.citations.length ? <div className="sources"><span>RETURNED SOURCES</span>{a.citations.map((c,i) => safeUrl(c.url) && <a key={c.url} href={c.url} target="_blank" rel="noreferrer noopener"><b>{i+1}</b>{c.title}<ExternalLink size={11}/></a>)}</div> : null}
-          {older.length > 0 && <details className="prior-attempts"><summary>{older.length} previous {older.length === 1 ? 'attempt' : 'attempts'}</summary>{older.map(x => <div key={x.id}><small>Attempt {x.number} · {label(x)} · {cost(x.usage?.cost)}</small><pre>{x.text || x.error || 'No answer returned.'}</pre></div>)}</details>}
+          {older.length > 0 && <details className="prior-attempts"><summary>{older.length} previous {older.length === 1 ? 'attempt' : 'attempts'}</summary>{older.map(x => <div key={x.id}><small>Attempt {x.number} · {label(x)} · {cost(x.usage?.cost)}</small> <VerdictBadge attempt={x}/><pre>{x.text || x.error || 'No answer returned.'}</pre></div>)}</details>}
         </section>;
       })}
     </div>

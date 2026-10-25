@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import worker from '../worker/index';
 import { hash, random } from '../worker/crypto';
 import type { AppEnv } from '../worker/env';
@@ -20,7 +20,9 @@ class Statement {
 }
 export const fixtureModels: Model[] = REQUESTED_MODELS.map(m => ({ id: m.id, name: `${m.provider}: ${m.name}`, context_length: 200_000, top_provider: { max_completion_tokens: 128_000 }, supported_parameters: ['max_tokens','tools','reasoning'], pricing: { prompt: '0.000002', completion: '0.00001' }, reasoning: { supported_efforts: ['high','low'] } }));
 export async function fixture() {
-  const sql = new DatabaseSync(':memory:'); sql.exec(readFileSync(new URL('../migrations/0001_council.sql',import.meta.url),'utf8'));
+  const sql = new DatabaseSync(':memory:');
+  const migrations = new URL('../migrations/', import.meta.url);
+  for (const name of readdirSync(migrations).filter(n => n.endsWith('.sql')).sort()) sql.exec(readFileSync(new URL(name, migrations), 'utf8'));
   const DB = {
     prepare: (query: string) => new Statement(sql,query),
     batch: async (statements: Statement[]) => {

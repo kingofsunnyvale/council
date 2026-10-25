@@ -7,6 +7,11 @@ import { streamAttempt } from '../worker/stream';
 import { readSSE } from '../shared/sse';
 const encoder=new TextEncoder();
 const frame=(data: unknown)=>`data: ${JSON.stringify(data)}\r\n\r\n`;
+function trailer(options: RequestInit, verdict='NOT_APPLICABLE') {
+  const payload = JSON.parse(options.body as string);
+  const prefix = payload.messages[0].content.match(/\[\[COUNCIL_VERDICT:[a-f0-9]+:/)?.[0];
+  assert.ok(prefix); return `\n${prefix}${verdict}]]`;
+}
 async function connected(n=7) {
   const f=await fixture();
   f.sql.prepare('INSERT INTO connections VALUES(?,?,?)').run(f.owner,await seal('test-only-provider-key',f.owner,f.env.ENCRYPTION_KEYS!),Date.now());
@@ -27,9 +32,9 @@ test('all seven upstream requests start before any completes, independently stre
   t.mock.method(globalThis,'fetch',async (_url: unknown, options: RequestInit) => {
     const payload=JSON.parse(options.body as string);calls.push(payload.model);
     assert.equal(payload.tools[0].parameters.max_uses,3);assert.equal(payload.tools[0].parameters.engine,'exa');
-    assert.equal(payload.messages.length,1);assert.equal(payload.provider.allow_fallbacks,false);
+    assert.equal(payload.messages.length,2);assert.equal(payload.messages[0].role,'system');assert.equal(payload.messages[1].role,'user');assert.equal(payload.provider.allow_fallbacks,false);
     if(calls.length===7)release();await barrier;
-    const bytes=encoder.encode(': processing\n\n'+frame({id:'provider-'+calls.indexOf(payload.model),choices:[{delta:{content:payload.model+' 🌍',reasoning:'DO NOT STORE'}}]})+frame({choices:[{delta:{annotations:[{type:'url_citation',url_citation:{url:'https://example.com/news',title:'Actual source'}}]},finish_reason:'stop'}]})+frame({choices:[],usage:{total_tokens:42,cost:0.017}})+'data: [DONE]\n\n');
+    const bytes=encoder.encode(': processing\n\n'+frame({id:'provider-'+calls.indexOf(payload.model),choices:[{delta:{content:payload.model+' 🌍',reasoning:'DO NOT STORE'}}]})+frame({choices:[{delta:{content:trailer(options),annotations:[{type:'url_citation',url_citation:{url:'https://example.com/news',title:'Actual source'}}]},finish_reason:'stop'}]})+frame({choices:[],usage:{total_tokens:42,cost:0.017}})+'data: [DONE]\n\n');
     return new Response(new ReadableStream({start(c){for(let i=0;i<bytes.length;i+=7)c.enqueue(bytes.slice(i,i+7));c.close();}}),{headers:{'content-type':'text/event-stream'}});
   });
   const responses=await Promise.all(f.d.attempts.map(a=>streamAttempt(new Request('https://worker.example/stream'),f.env,f.ctx,f.owner,a.id)));
@@ -38,6 +43,7 @@ test('all seven upstream requests start before any completes, independently stre
   for(let i=0;i<7;i++){
     const saved=await getAttempt(f.env,f.owner,f.d.attempts[i].id);
     assert.equal(saved.status,'complete');assert.equal(saved.text,f.d.attempts[i].model_id+' 🌍');
+    assert.equal(saved.verdict,null);
     assert.equal(JSON.parse(saved.usage!).cost,0.017);assert.equal(JSON.parse(saved.citations)[0].title,'Actual source');
     assert.equal(JSON.stringify(saved).includes('DO NOT STORE'),false);
     assert.ok(events[i].some(e=>e.type==='delta'));assert.equal(events[i].at(-1).type,'finished');
@@ -45,7 +51,7 @@ test('all seven upstream requests start before any completes, independently stre
 });
 test('duplicate stream claims bill once; provider errors isolate to one panel', async t => {
   const f=await connected(2);let calls=0;
-  t.mock.method(globalThis,'fetch',async()=>{calls++;return calls===1?Response.json({error:{message:'sensitive provider detail'}},{status:402}):new Response(frame({choices:[{delta:{content:'other succeeds'}}]})+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});});
+  t.mock.method(globalThis,'fetch',async(_u:unknown,options:RequestInit)=>{calls++;return calls===1?Response.json({error:{message:'sensitive provider detail'}},{status:402}):new Response(frame({choices:[{delta:{content:'other succeeds'+trailer(options)}}]})+'data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});});
   const a=f.d.attempts[0];
   const claims=await Promise.allSettled([streamAttempt(new Request('https://w/'),f.env,f.ctx,f.owner,a.id),streamAttempt(new Request('https://w/'),f.env,f.ctx,f.owner,a.id)]);
   assert.equal(claims.filter(r=>r.status==='fulfilled').length,1);

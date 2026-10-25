@@ -1,10 +1,11 @@
-import { LEASE_MS, MAX_STREAM_MS, safeUrl, type Citation, type Usage } from '../shared/config';
+import { LEASE_MS, MAX_STREAM_MS, safeUrl, type Citation, type Usage, type Verdict } from '../shared/config';
 import { readSSE, sse } from '../shared/sse';
 import type { AppEnv } from './env';
 import { catalog, parameters } from './catalog';
 import { providerKey } from './auth';
 import { HttpError } from './http';
 import { decodeAttempt, getAttempt, history, type AttemptRow } from './store';
+import { VerdictStream } from './verdict';
 
 export function reportedUsage(raw: unknown): Usage | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -44,7 +45,8 @@ export async function streamAttempt(request: Request, env: AppEnv, ctx: Executio
     throw new HttpError(409, 'This exact model is unavailable. No replacement was used.');
   }
   const turn = await env.DB.prepare('SELECT search FROM turns WHERE id=? AND owner_id=?').bind(a.turn_id, owner).first<{ search: number }>();
-  const payload = { ...parameters(model, !!turn?.search), messages: await history(env, a) };
+  const decision = new VerdictStream();
+  const payload = { ...parameters(model, !!turn?.search), messages: [{ role: 'system', content: decision.instruction() }, ...await history(env, a)] };
   const start = Date.now();
   const claim = await env.DB.prepare("UPDATE attempts SET status='running',started_at=?,lease_until=? WHERE id=? AND owner_id=? AND status='pending' AND cancel_requested=0 RETURNING id").bind(start, start + LEASE_MS, id, owner).first();
   if (!claim) throw new HttpError(409, 'This attempt was already claimed or stopped.');
@@ -53,7 +55,7 @@ export async function streamAttempt(request: Request, env: AppEnv, ctx: Executio
   request.signal.addEventListener('abort', abortForDisconnect, { once: true });
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
-      task = run(env, { ...a, started_at: start }, key, payload, abort, data => {
+      task = run(env, { ...a, started_at: start }, key, payload, decision, abort, data => {
         if (closed) return;
         if ((controller.desiredSize ?? 0) < 0) { abort.abort('slow-client'); throw new Error('Client stopped reading.'); }
         controller.enqueue(sse(data));
@@ -67,9 +69,10 @@ export async function streamAttempt(request: Request, env: AppEnv, ctx: Executio
   }, { highWaterMark: 262_144, size: chunk => chunk.byteLength });
   return new Response(body, { headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store, no-transform', 'X-Content-Type-Options': 'nosniff', 'X-Accel-Buffering': 'no' } });
 }
-async function run(env: AppEnv, a: AttemptRow, key: string, payload: unknown, abort: AbortController, emit: (data: unknown) => void) {
+async function run(env: AppEnv, a: AttemptRow, key: string, payload: unknown, decision: VerdictStream, abort: AbortController, emit: (data: unknown) => void) {
   let text = ''; let citations: Citation[] = []; let usage: Usage | null = null; let providerId: string | null = null;
   let status: 'complete' | 'stopped' | 'error' | 'interrupted' = 'interrupted'; let error: string | null = null;
+  let verdict: Verdict | null = null;
   let checkpointTask: Promise<void> | null = null;
   const checkpoint = async () => {
     const updated = await env.DB.prepare("UPDATE attempts SET text=?,citations=?,usage=?,provider_id=?,lease_until=? WHERE id=? AND status='running' RETURNING cancel_requested")
@@ -98,9 +101,10 @@ async function run(env: AppEnv, a: AttemptRow, key: string, payload: unknown, ab
       if (typeof chunk.id === 'string') providerId = chunk.id.slice(0,200);
       const delta = choice?.delta?.content;
       if (typeof delta === 'string') {
-        text += delta;
+        const visible = decision.push(delta);
+        text += visible;
         if (text.length > 500_000) throw new HttpError(413, 'Response exceeded the saved-text limit. The partial answer was retained.');
-        emit({ type: 'delta', text: delta });
+        if (visible) emit({ type: 'delta', text: visible });
       }
       const received = returnedCitations(chunk.annotations).concat(returnedCitations(choice?.delta?.annotations), returnedCitations(choice?.message?.annotations));
       if (received.length) { citations = [...new Map([...citations, ...received].map(c => [c.url, c])).values()].slice(0,50); emit({ type: 'citations', citations }); }
@@ -108,6 +112,8 @@ async function run(env: AppEnv, a: AttemptRow, key: string, payload: unknown, ab
       // finish_reason does not end the stream: final usage may follow separately.
     }
     if (!done) throw new Error('Stream ended without a terminator.');
+    verdict = decision.finish();
+    if (!text.trim()) throw new HttpError(502, 'The model returned no answer. Please retry.');
     status = 'complete';
   } catch (failure) {
     if (abort.signal.aborted) {
@@ -116,8 +122,9 @@ async function run(env: AppEnv, a: AttemptRow, key: string, payload: unknown, ab
     } else { status = failure instanceof HttpError ? 'error' : 'interrupted'; error = failure instanceof HttpError ? failure.message : 'Provider stream interrupted. Partial answer saved; retry explicitly.'; }
   } finally {
     clearInterval(timer); clearTimeout(deadline); if (checkpointTask) await checkpointTask;
-    const saved = await env.DB.prepare("UPDATE attempts SET text=?,citations=?,usage=?,provider_id=?,status=CASE WHEN cancel_requested=1 THEN 'stopped' ELSE ? END,error=CASE WHEN cancel_requested=1 THEN NULL ELSE ? END,finished_at=?,lease_until=NULL WHERE id=? AND status='running' RETURNING *")
-      .bind(text.slice(0,500_000), JSON.stringify(citations), usage ? JSON.stringify(usage) : null, providerId, status, error, Date.now(), a.id).first<AttemptRow>();
+    text = (text + decision.drain()).trimEnd();
+    const saved = await env.DB.prepare("UPDATE attempts SET text=?,citations=?,usage=?,provider_id=?,status=CASE WHEN cancel_requested=1 THEN 'stopped' ELSE ? END,error=CASE WHEN cancel_requested=1 THEN NULL ELSE ? END,verdict=CASE WHEN cancel_requested=1 THEN NULL ELSE ? END,finished_at=?,lease_until=NULL WHERE id=? AND status='running' RETURNING *")
+      .bind(text.slice(0,500_000), JSON.stringify(citations), usage ? JSON.stringify(usage) : null, providerId, status, error, status === 'complete' ? verdict : null, Date.now(), a.id).first<AttemptRow>();
     if (saved) { try { emit({ type: 'finished', attempt: decodeAttempt(saved) }); } catch { /* saved even after disconnect */ } }
   }
 }
