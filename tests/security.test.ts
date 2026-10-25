@@ -20,6 +20,7 @@ test('every private API rejects direct access, spoofed identity, and missing ses
   }
   assert.equal((await f.request('/api/auth/openrouter/start','POST',{}, { origin:'https://evil.example' })).status,403);
   assert.equal((await f.request('/api/conversations','POST',{}, { origin:null })).status,403);
+  assert.equal((await f.request('/api/auth/openrouter/callback?code=test&state=test','GET',undefined,{'x-council-service':null})).status,401);
   f.sql.prepare('UPDATE sessions SET expires_at=0').run(); assert.equal((await f.request('/api/session')).status,401);
 });
 test('deployment-gated sessions require the private gateway and same-origin POST', async () => {

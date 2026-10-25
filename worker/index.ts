@@ -7,7 +7,7 @@ import { streamAttempt } from './stream';
 
 export default {
   async fetch(request: Request, env: AppEnv, ctx: ExecutionContext): Promise<Response> {
-    const path = new URL(request.url).pathname; const method = request.method;
+    const path = new URL(request.url).pathname; const method = request.method; let gatewayVerified = false;
     try {
       if (path === '/health') {
         if (method !== 'GET') return json({ error: 'method_not_allowed' }, 405, { Allow: 'GET' });
@@ -18,6 +18,7 @@ export default {
         } catch { return json({ service: 'council', status: 'unavailable' }, 503); }
       }
       await requireGateway(request, env);
+      gatewayVerified = true;
       if (!['GET','POST','DELETE'].includes(method)) throw new HttpError(405, 'Method not allowed.');
       if (method !== 'GET') requireOrigin(request, env);
       if (path === '/api/session' && method === 'POST') return await openSession(request, env);
@@ -89,7 +90,7 @@ export default {
       return json({ error: 'Not found.' }, 404);
     } catch (error) {
       // Never log request URLs, OAuth codes, raw upstream errors, or chat content.
-      if (path.endsWith('/callback')) return redirect(origin(env) + '/?auth_error=failed');
+      if (gatewayVerified && path.endsWith('/callback')) return redirect(origin(env) + '/?auth_error=failed');
       return json({ error: error instanceof HttpError ? error.message : 'The request could not be completed. Please retry.' }, error instanceof HttpError ? error.status : 500);
     }
   },
