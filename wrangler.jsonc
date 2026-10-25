@@ -8,7 +8,7 @@
   "preview_urls": false,
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true, "head_sampling_rate": 1, "logs": { "enabled": true, "invocation_logs": false } },
-  "vars": { "OWNER_ID": "private-workspace" },
+  "vars": { "OWNER_ID": "private-workspace", "PUBLIC_SHARED": "true" },
   "secrets": { "required": ["SERVICE_SECRET", "ENCRYPTION_KEYS"] },
   "d1_databases": [
     { "binding": "DB", "database_name": "council", "database_id": "46e3b3b2-5f5b-46c3-bd68-fabf4fb2de12", "migrations_dir": "migrations" }

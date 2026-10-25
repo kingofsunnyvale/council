@@ -23,6 +23,10 @@ export default {
       if (method !== 'GET') requireOrigin(request, env);
       if (path === '/api/session' && method === 'POST') return await openSession(request, env);
       const owner = await session(request, env);
+      const managed = env.PUBLIC_SHARED === 'true';
+      if (managed && ((path === '/api/account' && method !== 'GET') || path.startsWith('/api/auth/openrouter/'))) {
+        return json({ error: 'The shared OpenRouter connection is managed by the workspace owner.' }, 403);
+      }
       if (path === '/api/session' && method === 'GET') return json({ owner: { id: owner.id, login: owner.login } });
       if (path === '/api/auth/logout' && method === 'POST') {
         await env.DB.prepare('DELETE FROM sessions WHERE hash=?').bind(owner.sessionHash).run();
@@ -32,14 +36,14 @@ export default {
       if (path === '/api/auth/openrouter/callback' && method === 'GET') return await finishOAuth(request, env);
       if (path === '/api/account' && method === 'GET') {
         const exists = await env.DB.prepare('SELECT owner_id FROM connections WHERE owner_id=?').bind(owner.id).first();
-        if (!exists) return json({ connected: false });
+        if (!exists) return json({ connected: false, managed });
         try {
           const key = await providerKey(env, owner.id);
           const response = await fetch('https://openrouter.ai/api/v1/key', { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10_000) });
-          if (!response.ok) { await response.body?.cancel(); return json({ connected: true, valid: false, error: 'OpenRouter could not verify this key. Reconnect or try again.' }); }
+          if (!response.ok) { await response.body?.cancel(); return json({ connected: true, valid: false, managed, error: managed ? 'The shared OpenRouter connection needs attention from the workspace owner.' : 'OpenRouter could not verify this key. Reconnect or try again.' }); }
           const body = await readJson<{ data: { limit_remaining?: number | null; usage?: number; is_free_tier?: boolean } }>(response, 32_000);
-          return json({ connected: true, valid: true, limitRemaining: body.data.limit_remaining ?? null, usage: body.data.usage ?? null, freeTier: body.data.is_free_tier ?? null });
-        } catch { return json({ connected: true, valid: false, error: 'Account status is temporarily unavailable.' }); }
+          return json(managed ? { connected: true, valid: true, managed } : { connected: true, valid: true, managed, limitRemaining: body.data.limit_remaining ?? null, usage: body.data.usage ?? null, freeTier: body.data.is_free_tier ?? null });
+        } catch { return json({ connected: true, valid: false, managed, error: 'Account status is temporarily unavailable.' }); }
       }
       if (path === '/api/account' && method === 'DELETE') {
         await env.DB.batch([

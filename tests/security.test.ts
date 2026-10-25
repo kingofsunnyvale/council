@@ -55,6 +55,22 @@ test('encryption supports version rotation with fresh nonces and rejects tamperi
   assert.equal(await unseal(a,'owner',ring),'secret'); assert.match(await seal('secret','owner',ring),/^v2\./);
   await assert.rejects(unseal(a.slice(0,-8)+'AAAAAAAA','owner',ring));
 });
+test('public shared sessions can chat but cannot inspect key limits or change credentials', async t => {
+  const f=await fixture(); f.env.PUBLIC_SHARED='true';
+  const encrypted=await seal('test-shared-key',f.owner,f.env.ENCRYPTION_KEYS!);
+  f.sql.prepare('INSERT INTO connections VALUES(?,?,?)').run(f.owner,encrypted,Date.now());
+  t.mock.method(globalThis,'fetch',async()=>Response.json({data:{limit_remaining:100,usage:12,is_free_tier:false}}));
+  assert.deepEqual(await (await f.request('/api/account')).json(),{connected:true,valid:true,managed:true});
+  const opened=await f.request('/api/session','POST',{}, {cookie:null});
+  assert.equal(opened.status,200); assert.equal((await opened.json()).owner.login,'Shared workspace');
+  const visitorCookie=opened.headers.get('set-cookie')!.split(';')[0];
+  const c=await (await f.request('/api/conversations','POST',{id:random(),models:[fixtureModels[0].id]})).json();
+  assert.equal((await f.request('/api/conversations/'+c.id,'GET',undefined,{cookie:visitorCookie})).status,200);
+  assert.equal((await f.request('/api/account','DELETE')).status,403);
+  assert.equal((await f.request('/api/auth/openrouter/start','POST',{})).status,403);
+  assert.equal((await f.request('/api/auth/openrouter/callback?code=test&state=test')).status,403);
+  assert.equal(f.sql.prepare('SELECT credential FROM connections').get()!.credential,encrypted);
+});
 test('model parameters enforce exact IDs, high reasoning, caps, and independent Exa limits', () => {
   const result=parameters(fixtureModels[0],true);
   assert.equal(result.model,fixtureModels[0].id); assert.equal(result.max_tokens,32768);

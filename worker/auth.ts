@@ -24,11 +24,10 @@ export async function session(request: Request, env: AppEnv): Promise<Owner> {
   const sessionHash = await hash(raw);
   const row = await env.DB.prepare('SELECT u.id, u.login FROM sessions s JOIN users u ON u.id=s.owner_id WHERE s.hash=? AND s.expires_at>? AND s.owner_id=?').bind(sessionHash, Date.now(), env.OWNER_ID).first<{ id: string; login: string }>();
   if (!row) throw new HttpError(401, 'Reopen Council to start a session.');
-  return { ...row, sessionHash };
+  return { ...row, login: env.PUBLIC_SHARED === 'true' ? 'Shared workspace' : row.login, sessionHash };
 }
-// Called only after gateway authentication and Origin validation. Vercel's
-// All Deployments protection is the access gate; this cookie binds OAuth to a browser.
-// There is deliberately no additional GitHub/ChatGPT identity verification.
+// Called only after gateway authentication and Origin validation. In public
+// shared mode anyone may join the workspace; this cookie is not an identity check.
 export async function openSession(request: Request, env: AppEnv): Promise<Response> {
   try { const owner = await session(request, env); return json({ owner: { id: owner.id, login: owner.login } }); }
   catch (e) { if (!(e instanceof HttpError && e.status === 401)) throw e; }
@@ -38,7 +37,7 @@ export async function openSession(request: Request, env: AppEnv): Promise<Respon
     env.DB.prepare("INSERT INTO users(id,login,created_at) VALUES(?,'Private workspace',?) ON CONFLICT(id) DO NOTHING").bind(env.OWNER_ID, now),
     env.DB.prepare('INSERT INTO sessions(hash,owner_id,expires_at) VALUES(?,?,?)').bind(await hash(raw), env.OWNER_ID, now + 7 * 86400_000),
   ]);
-  return json({ owner: { id: env.OWNER_ID, login: 'Private workspace' } }, 200, { 'Set-Cookie': cookie(env, raw, 7 * 86400) });
+  return json({ owner: { id: env.OWNER_ID, login: env.PUBLIC_SHARED === 'true' ? 'Shared workspace' : 'Private workspace' } }, 200, { 'Set-Cookie': cookie(env, raw, 7 * 86400) });
 }
 export async function providerKey(env: AppEnv, owner: string): Promise<string> {
   const row = await env.DB.prepare('SELECT credential FROM connections WHERE owner_id=?').bind(owner).first<{ credential: string }>();

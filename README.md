@@ -1,14 +1,14 @@
 # Council
 
-A private, responsive dashboard for asking one question across one to eight frontier models. Answers stream independently, conversations are saved, and each model retains only its own assistant history.
+A public, shared dashboard for asking one question across one to eight frontier models. Answers stream independently, conversations are saved, and each model retains only its own assistant history.
 
-Production: <https://council-delta-nine.vercel.app> (Vercel protected).
+Production: <https://council-delta-nine.vercel.app> (public; no sign-in required).
 
 ## Access and account connection
 
-Vercel's **All Deployments** protection controls access. At the owner's request there is no additional GitHub or ChatGPT sign-in. Everyone admitted by the project's Vercel protection shares this workspace. The Node gateway authenticates to Cloudflare with a server-only secret; direct Worker application requests are rejected. Keep deployment protection enabled.
+Anyone can open Council and use the same saved conversations and host-provided OpenRouter credits. The owner explicitly chose this shared public mode. No Vercel, GitHub, or ChatGPT sign-in is required on the canonical production URL.
 
-Open the app, connect your OpenRouter account, and authorize Council using OpenRouter's PKCE flow. Credentials are exchanged on the server and encrypted in D1; the browser never receives the provider key. Connection status reports the key's documented limit, not an assumed account balance. Disconnect deletes Council's stored credential; revoke the key in OpenRouter to disable it at the provider too.
+The key remains encrypted in D1 and is never returned to browsers. Public visitors cannot replace or disconnect it, and account-wide usage and key limits are not exposed. Credential maintenance uses the owner's trusted deployment tools. The Worker still rejects direct application requests without the server-only gateway secret. Vercel Standard Protection remains on generated deployment URLs and previews.
 
 ## Features
 

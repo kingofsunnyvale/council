@@ -8,9 +8,9 @@ async function fixture(page: Page) {
     const r=route.request(),path=new URL(r.url()).pathname;
     const data=r.method()==='POST'?r.postDataJSON():null;
     const send=(json:unknown)=>route.fulfill({json});
-    if(path==='/api/session')return send({owner:{login:'Private workspace'}});
+    if(path==='/api/session')return send({owner:{login:'Shared workspace'}});
     if(path==='/api/models')return send({models:REQUESTED_MODELS.map(m=>({...m,context_length:1000000,top_provider:{max_completion_tokens:128000},supported_parameters:['tools','reasoning','max_tokens'],reasoning:{supported_efforts:['high']},pricing:{prompt:'0.000002',completion:'0.00001'}})),fetchedAt:Date.now(),missing:[]});
-    if(path==='/api/account')return send({connected:true,valid:true,limitRemaining:10});
+    if(path==='/api/account')return send({connected:true,valid:true,managed:true});
     if(path==='/api/conversations' && r.method()==='GET')return send({conversations:detail?[detail.conversation]:[]});
     if(path==='/api/conversations') {
       detail={conversation:{id:data.id,title:'New conversation',models:data.models,version:0,created_at:Date.now(),updated_at:Date.now()},turns:[],attempts:[]};return send(detail.conversation);
@@ -54,4 +54,12 @@ test('unsent draft is protected when starting a new conversation', async ({page}
   if(await page.getByLabel('Open navigation').isVisible())await page.getByLabel('Open navigation').click();
   page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'New conversation'}).click();
   await expect(page.getByLabel('Message your council')).toHaveValue('My unsent draft');
+});
+
+test('public workspace discloses sharing and hides credential controls', async ({page}) => {
+  await fixture(page); await page.goto('/');
+  await page.getByRole('button',{name:'OpenRouter connected'}).click();
+  await expect(page.getByRole('dialog').getByText("Everyone shares these conversations and the host's OpenRouter credits.")).toBeVisible();
+  await expect(page.getByRole('button',{name:'Reconnect OpenRouter'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Disconnect account'})).toHaveCount(0);
 });
